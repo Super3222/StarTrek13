@@ -457,12 +457,18 @@
 
 /obj/effect/ebeam/phaser
 	name = "high density photon beam"
+	var/datum/effect_system/trail_follow/ion/ion_trail
 //	max_distance = "5000"
 
+/obj/effect/ebeam/phaser/New()
+	..()
+	ion_trail = new
+	ion_trail.set_up(src)
 
 /obj/item/circuitboard/machine/phase_cannon
 	name = "phaser array circuit board"
 	build_path = /obj/machinery/borg/ftl
+	origin_tech = "programming=10;engineering=8"
 	req_components = list(
 							/obj/item/stock_parts/borg/bin = 2,
 							/obj/item/stock_parts/borg/capacitor = 2)
@@ -702,7 +708,6 @@
 
 /obj/structure/fluff/helm/desk/tactical/process()
 	var/area/thearea = get_area(src)
-	get_weapons()
 	if(world.time >= saved_time + cooldown2)
 		saved_time = world.time
 		for(var/mob/M in thearea)
@@ -735,6 +740,7 @@
 		weapons += P
 	for(var/obj/structure/torpedo_launcher/T in thearea)
 		torpedoes += T
+
 
 /obj/structure/fluff/helm/desk/tactical/attack_hand(mob/user)
 	get_weapons()
@@ -789,12 +795,14 @@
 	else
 		to_chat(user, "ERROR, no target selected")
 
-/obj/structure/fluff/helm/desk/tactical/proc/fire_torpedo(turf/target,mob/user)
+/obj/structure/fluff/helm/desk/tactical/proc/fire_torpedo(atom/target,mob/user)
+	if(!target)
+		new_target()
 	for(var/obj/structure/torpedo_launcher/T in torpedoes)
 		src.say("firing torpedoes at [target_area.name]")
-		T.fire(target, user)
+		T.target = target
+		T.fire()
 		playsound(src.loc, 'StarTrek13/sound/borg/machines/bleep2.ogg', 100,1)
-		to_chat(user, "attempting to fire torpedoes")
 
 
 
@@ -862,7 +870,7 @@ obj/structure/torpedo_launcher
 	var/list/loaded = list()
 	var/list/sounds = list('StarTrek13/sound/borg/machines/torpedo1.ogg','StarTrek13/sound/borg/machines/torpedo2.ogg')
 	var/obj/machinery/space_battle/shield_generator/shieldgen
-//	var/atom/target = null
+	var/atom/target = null
 	density = 1
 	anchored = 1
 
@@ -895,7 +903,7 @@ obj/structure/torpedo_launcher/proc/find_generator()
 	for(var/obj/machinery/space_battle/shield_generator/S in thearea)
 		shieldgen = S
 
-obj/structure/torpedo_launcher/proc/fire(atom/movable/target, mob/user)
+obj/structure/torpedo_launcher/proc/fire()
 	icon_state = "torpedolauncher"
 	var/sound = pick(sounds)
 	find_generator()
@@ -911,10 +919,8 @@ obj/structure/torpedo_launcher/proc/fire(atom/movable/target, mob/user)
 			T.armed = 1
 			T.icon_state = "torpedo_armed"
 		var/atom/throw_at = get_turf(target)
-	//	A.forceMove(throw_at)
-		A.throw_at(throw_at, 1000, 1)
+		A.throw_at(throw_at, 500, 1)
 		loaded = list()
-		to_chat(user, "Success")
 	if(!loaded.len)
 		src.say("Nothing is loaded")
 
@@ -1120,6 +1126,7 @@ obj/structure/torpedo_launcher/proc/fire(atom/movable/target, mob/user)
 
 
 /obj/effect/mob_spawn/human/alive/trek
+	icon = 'icons/obj/Cryogenic2.dmi'
 	icon_state = "sleeper"
 	death = FALSE
 	roundstart = FALSE
